@@ -321,3 +321,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = RegistroClienteApp(root)
     root.mainloop()
+
+#Antes de rodar o codigo, certifique-se que baixou o arquivo JSON da pasta anterior a esse codigo para poder inserir um BD valido.
