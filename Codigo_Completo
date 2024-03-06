@@ -1,0 +1,323 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import re
+import json
+import sys
+
+class EdicaoClienteApp:
+    def __init__(self, root, cliente, index, callback):
+        self.root = root
+        self.cliente = cliente
+        self.index = index
+        self.callback = callback
+
+        self.root.title("Editar Cliente")
+
+        self.main_frame = ttk.Frame(self.root, padding=(20, 10))
+        self.main_frame.grid(row=0, column=0)
+
+        self.label_nome = ttk.Label(self.main_frame, text="Nome:")
+        self.label_nome.grid(row=0, column=0, sticky="e")
+        self.entry_nome = ttk.Entry(self.main_frame, width=40)
+        self.entry_nome.insert(0, cliente["Nome"])
+        self.entry_nome.grid(row=0, column=1)
+
+        self.label_email = ttk.Label(self.main_frame, text="E-mail:")
+        self.label_email.grid(row=1, column=0, sticky="e")
+        self.entry_email = ttk.Entry(self.main_frame, width=40)
+        self.entry_email.insert(0, cliente["E-mail"])
+        self.entry_email.grid(row=1, column=1)
+
+        self.label_telefone = ttk.Label(self.main_frame, text="Telefone:")
+        self.label_telefone.grid(row=2, column=0, sticky="e")
+        self.entry_telefone = ttk.Entry(self.main_frame, width=40)
+        self.entry_telefone.insert(0, cliente["Telefone"])
+        self.entry_telefone.grid(row=2, column=1)
+
+        self.label_cpf = ttk.Label(self.main_frame, text="CPF:")
+        self.label_cpf.grid(row=3, column=0, sticky="e")
+        self.entry_cpf = ttk.Entry(self.main_frame, width=40)
+        self.entry_cpf.insert(0, cliente["CPF"])
+        self.entry_cpf.grid(row=3, column=1)
+
+        self.btn_salvar = ttk.Button(self.main_frame, text="Salvar", command=self.salvar_edicao)
+        self.btn_salvar.grid(row=4, column=0, columnspan=2, pady=5, sticky="nsew")
+
+    def salvar_edicao(self):
+        novo_cliente = {
+            "Nome": self.entry_nome.get().strip(),
+            "E-mail": self.entry_email.get().strip(),
+            "Telefone": self.entry_telefone.get().strip(),
+            "CPF": self.entry_cpf.get().strip()
+        }
+
+        errors = []
+
+        if not novo_cliente["Nome"] or ' ' not in novo_cliente["Nome"]:
+            errors.append("Por favor, insira um nome e um sobrenome.")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", novo_cliente["E-mail"]):
+            errors.append("Por favor, insira um endereço de e-mail válido.")
+        if not novo_cliente["Telefone"].isdigit() or len(novo_cliente["Telefone"]) != 11:
+            errors.append("Por favor, insira um número de telefone válido com 11 dígitos.")
+        if not novo_cliente["CPF"].isdigit() or len(novo_cliente["CPF"]) != 11 or not self.validar_cpf(novo_cliente["CPF"]):
+            errors.append("Por favor, insira um CPF válido com 11 dígitos.")
+
+        for cliente in self.callback():
+            if cliente != self.cliente and (cliente["Nome"] == novo_cliente["Nome"] or cliente["E-mail"] == novo_cliente["E-mail"] or cliente["CPF"] == novo_cliente["CPF"]):
+                errors.append("Informações duplicadas. Este cliente já está registrado.")
+                break
+
+        if errors:
+            for error in errors:
+                messagebox.showerror("Erro no Preenchimento", error)
+        else:
+            self.callback(self.index, novo_cliente)
+            self.root.destroy()
+
+    def validar_cpf(self, cpf):
+        cpf = [int(digit) for digit in cpf]
+
+        if len(set(cpf)) == 1:
+            return False
+
+        soma = sum(x * y for x, y in zip(cpf[:9], range(10, 1, -1)))
+        primeiro_digito = (soma * 10) % 11
+        if primeiro_digito == 10:
+            primeiro_digito = 0
+
+        soma = sum(x * y for x, y in zip(cpf[:10], range(11, 1, -1)))
+        segundo_digito = (soma * 10) % 11
+        if segundo_digito == 10:
+            segundo_digito = 0
+
+        return primeiro_digito == cpf[9] and segundo_digito == cpf[10]
+
+class RegistroClienteApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Registro de Cliente")
+
+        self.clientes = []
+
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+
+        self.create_menu()
+
+        self.main_frame = ttk.Frame(self.root, padding=(20, 10))
+        self.main_frame.grid(row=0, column=0)
+
+        self.label_nome = ttk.Label(self.main_frame, text="Nome:")
+        self.label_nome.grid(row=0, column=0, sticky="e")
+        self.entry_nome = ttk.Entry(self.main_frame, width=40)
+        self.entry_nome.grid(row=0, column=1)
+
+        self.label_email = ttk.Label(self.main_frame, text="E-mail:")
+        self.label_email.grid(row=1, column=0, sticky="e")
+        self.entry_email = ttk.Entry(self.main_frame, width=40)
+        self.entry_email.grid(row=1, column=1)
+
+        self.label_telefone = ttk.Label(self.main_frame, text="Telefone:")
+        self.label_telefone.grid(row=2, column=0, sticky="e")
+        self.entry_telefone = ttk.Entry(self.main_frame, width=40)
+        self.entry_telefone.grid(row=2, column=1)
+
+        self.label_cpf = ttk.Label(self.main_frame, text="CPF:")
+        self.label_cpf.grid(row=3, column=0, sticky="e")
+        self.entry_cpf = ttk.Entry(self.main_frame, width=40)
+        self.entry_cpf.grid(row=3, column=1)
+
+        self.btn_registrar = ttk.Button(self.main_frame, text="Registrar Cliente", command=self.registrar_cliente)
+        self.btn_registrar.grid(row=4, column=0, columnspan=2, pady=5, sticky="nsew")
+
+        self.btn_limpar = ttk.Button(self.main_frame, text="Limpar Campos", command=self.limpar_campos)
+        self.btn_limpar.grid(row=5, column=0, columnspan=2, pady=5, sticky="nsew")
+
+        self.btn_consultar = ttk.Button(self.main_frame, text="Consultar Clientes", command=self.consultar_clientes)
+        self.btn_consultar.grid(row=6, column=0, columnspan=2, pady=5, sticky="nsew")
+
+        self.carregar_arquivo_inicial()
+
+        if not self.clientes:
+            messagebox.showerror("Erro", "Um arquivo JSON deve ser carregado para continuar.")
+            sys.exit()
+
+        self.root.protocol("WM_DELETE_WINDOW", self.fechar_aplicativo)
+
+    def create_menu(self):
+        menubar = tk.Menu(self.root)
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Salvar", command=self.salvar_arquivo)
+        file_menu.add_command(label="Carregar", command=self.carregar_arquivo)
+        file_menu.add_separator()
+        file_menu.add_command(label="Sair", command=self.fechar_aplicativo)
+        menubar.add_cascade(label="Arquivo", menu=file_menu)
+        self.root.config(menu=menubar)
+
+    def salvar_arquivo(self):
+        filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
+        if filename:
+            with open(filename, "w") as f:
+                json.dump(self.clientes, f)
+            messagebox.showinfo("Salvar", "Dados salvos com sucesso.")
+
+    def carregar_arquivo(self):
+        try:
+            filename = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+            if filename:
+                with open(filename, "r") as f:
+                    self.clientes = json.load(f)
+                messagebox.showinfo("Carregar", "Dados carregados com sucesso.")
+        except json.JSONDecodeError:
+            messagebox.showerror("Erro", "Erro ao carregar o arquivo JSON. Verifique se o formato do arquivo está correto.")
+
+    def carregar_arquivo_inicial(self):
+        filename = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+        if filename:
+            try:
+                with open(filename, "r") as f:
+                    self.clientes = json.load(f)
+            except json.JSONDecodeError:
+                messagebox.showerror("Erro", "Erro ao carregar o arquivo JSON. Verifique se o formato do arquivo está correto.")
+                sys.exit()
+
+    def fechar_aplicativo(self):
+        if messagebox.askyesno("Fechar", "Deseja salvar os dados antes de sair?"):
+            self.salvar_arquivo()
+        self.root.destroy()
+
+    def registrar_cliente(self):
+        nome = self.entry_nome.get().strip()
+        email = self.entry_email.get().strip()
+        telefone = self.entry_telefone.get().strip()
+        cpf = self.entry_cpf.get().strip()
+
+        errors = []
+
+        if not nome or ' ' not in nome:
+            errors.append("Por favor, insira um nome e um sobrenome.")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            errors.append("Por favor, insira um endereço de e-mail válido.")
+        if not telefone.isdigit() or len(telefone) != 11:
+            errors.append("Por favor, insira um número de telefone válido com 11 dígitos.")
+        if not cpf.isdigit() or len(cpf) != 11 or not self.validar_cpf(cpf):
+            errors.append("Por favor, insira um CPF válido com 11 dígitos.")
+
+        for cliente in self.clientes:
+            if cliente["Nome"] == nome or cliente["E-mail"] == email or cliente["CPF"] == cpf:
+                errors.append("Informações duplicadas. Este cliente já está registrado.")
+                break
+
+        if errors:
+            for error in errors:
+                messagebox.showerror("Erro no Preenchimento", error)
+        else:
+            self.clientes.append({"Nome": nome, "E-mail": email, "Telefone": telefone, "CPF": cpf})
+            messagebox.showinfo("Registro de Cliente", f"Cliente {nome} registrado com sucesso!")
+            self.limpar_campos()
+
+    def limpar_campos(self):
+        self.entry_nome.delete(0, tk.END)
+        self.entry_email.delete(0, tk.END)
+        self.entry_telefone.delete(0, tk.END)
+        self.entry_cpf.delete(0, tk.END)
+
+    def validar_cpf(self, cpf):
+        cpf = [int(digit) for digit in cpf]
+
+        if len(set(cpf)) == 1:
+            return False
+
+        soma = sum(x * y for x, y in zip(cpf[:9], range(10, 1, -1)))
+        primeiro_digito = (soma * 10) % 11
+        if primeiro_digito == 10:
+            primeiro_digito = 0
+
+        soma = sum(x * y for x, y in zip(cpf[:10], range(11, 1, -1)))
+        segundo_digito = (soma * 10) % 11
+        if segundo_digito == 10:
+            segundo_digito = 0
+
+        return primeiro_digito == cpf[9] and segundo_digito == cpf[10]
+
+    def consultar_clientes(self):
+        consulta_window = tk.Toplevel(self.root)
+        consulta_window.title("Clientes Registrados")
+
+        search_frame = ttk.Frame(consulta_window)
+        search_frame.pack(pady=10)
+
+        search_label = ttk.Label(search_frame, text="Buscar:")
+        search_label.grid(row=0, column=0)
+
+        self.search_entry = ttk.Entry(search_frame, width=30)
+        self.search_entry.grid(row=0, column=1, padx=5)
+
+        search_button = ttk.Button(search_frame, text="Buscar", command=self.filtrar_clientes)
+        search_button.grid(row=0, column=2, padx=5)
+
+        if not self.clientes:
+            ttk.Label(consulta_window, text="Nenhum cliente registrado.").pack()
+        else:
+            self.clientes_frame = ttk.Frame(consulta_window)
+            self.clientes_frame.pack(pady=5, padx=10, fill="both", expand=True)
+
+            self.mostrar_todos_clientes()
+
+    def filtrar_clientes(self):
+        termo_busca = self.search_entry.get().strip().lower()
+        clientes_filtrados = []
+
+        for cliente in self.clientes:
+            if termo_busca in cliente["Nome"].lower() or \
+               termo_busca in cliente["E-mail"].lower() or \
+               termo_busca in cliente["Telefone"].lower() or \
+               termo_busca in cliente["CPF"].lower():
+                clientes_filtrados.append(cliente)
+
+        self.mostrar_todos_clientes(clientes_filtrados)
+
+    def mostrar_todos_clientes(self, clientes=None):
+        if clientes is None:
+            clientes = self.clientes
+
+        for widget in self.clientes_frame.winfo_children():
+            widget.destroy()
+
+        for index, cliente in enumerate(clientes):
+            cliente_frame = ttk.Frame(self.clientes_frame, relief="solid", borderwidth=1, padding=10)
+            cliente_frame.pack(pady=5, padx=10, fill="both", expand=True)
+
+            for key, value in cliente.items():
+                ttk.Label(cliente_frame, text=f"{key}: {value}").pack(anchor="w")
+
+            # Adicionando botões para editar e excluir o cliente
+            edit_button = ttk.Button(cliente_frame, text="Editar", command=lambda i=index: self.editar_cliente(i))
+            edit_button.pack(side="left", padx=5)
+
+            delete_button = ttk.Button(cliente_frame, text="Excluir", command=lambda i=index: self.excluir_cliente(i))
+            delete_button.pack(side="left", padx=5)
+
+    def editar_cliente(self, index):
+        cliente = self.clientes[index]
+        edit_window = tk.Toplevel(self.root)
+        app = EdicaoClienteApp(edit_window, cliente, index, self.atualizar_clientes)
+
+    def excluir_cliente(self, index):
+        cliente = self.clientes[index]
+        confirmar_exclusao = messagebox.askyesno("Excluir Cliente", f"Tem certeza que deseja excluir o cliente {cliente['Nome']}?")
+        
+        if confirmar_exclusao:
+            cliente_excluido = self.clientes.pop(index)
+            messagebox.showinfo("Excluir Cliente", f"Cliente {cliente['Nome']} excluído com sucesso!")
+            self.mostrar_todos_clientes()
+
+    def atualizar_clientes(self, index=None, novo_cliente=None):
+        if index is not None and novo_cliente is not None:
+            self.clientes[index] = novo_cliente
+        return self.clientes
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = RegistroClienteApp(root)
+    root.mainloop()
