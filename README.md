@@ -1,4 +1,4 @@
-# 🚀 Lançamento Ferramenta de Registro de Clientes em Python 🚀
+# 🚀 Ferramenta de Registro de Clientes em Python 🚀
 
 - É com grande entusiasmo que compartilho com minha rede no LinkedIn o lançamento do meu primeiro projeto pessoal: uma robusta Ferramenta de Registro de Clientes desenvolvida inteiramente em Python! 🐍💼
 
