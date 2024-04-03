@@ -1,5 +1,7 @@
 # 🚀 Ferramenta de Registro de Clientes em Python 🚀
 
+- ONLY WINDOWS 10
+
 - É com grande entusiasmo que compartilho com minha rede no LinkedIn o lançamento do meu primeiro projeto pessoal: uma robusta Ferramenta de Registro de Clientes desenvolvida inteiramente em Python! 🐍💼
 
 - Este projeto nasceu da necessidade de criar uma solução eficiente e acessível para pequenas e médias empresas gerenciarem seus registros de clientes. Utilizando a biblioteca Tkinter para a interface gráfica, esta aplicação oferece uma experiência de usuário amigável, permitindo operações de cadastro, consulta, edição e exclusão de clientes de forma intuitiva.
